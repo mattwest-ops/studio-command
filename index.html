@@ -342,9 +342,9 @@ async function loadTrelloTasks() {
     const fire=[], week=[], done=[];
     cards.forEach(c => {
       const n = lm[c.idList]||'';
-      if (n.includes('On Fire')) fire.push(c);
-      else if (n.includes('This Week')) week.push(c);
-      else if (n.includes('Done')) done.push(c);
+      if (n.includes('On Fire') && !c.dueComplete) fire.push(c);
+      else if (n.includes('This Week') && !c.dueComplete) week.push(c);
+      else if (n.includes('Done') || c.dueComplete) done.push(c);
     });
     const byDue = a => a.sort((x,y) => (!x.due&&!y.due)?0:!x.due?1:!y.due?-1:new Date(x.due)-new Date(y.due));
     renderTasks('fireTasks','fireCount',byDue(fire),'fire');
