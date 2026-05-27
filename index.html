@@ -76,14 +76,8 @@ body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif
 .loading { font-family:'DM Mono',monospace; font-size:11px; color:var(--text-dim); padding:24px 0; letter-spacing:0.08em; }
 .empty { font-family:'DM Mono',monospace; font-size:11px; color:var(--text-dim); padding:12px 0; }
 .error-msg { font-family:'DM Mono',monospace; font-size:11px; color:var(--red); padding:12px 0; }
-.workspace-select { margin-bottom:18px; }
-.workspace-label { font-family:'DM Mono',monospace; font-size:10px; color:var(--text-dim); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:7px; }
-.workspace-options { display:flex; flex-direction:column; gap:6px; max-height:160px; overflow-y:auto; }
-.workspace-option { display:flex; align-items:center; gap:10px; padding:8px 12px; background:var(--bg); border:1px solid var(--border); cursor:pointer; transition:border-color 0.15s; font-size:12px; }
-.workspace-option:hover { border-color:var(--text-mid); }
-.workspace-option input { accent-color:var(--red); }
 .overlay { position:fixed; inset:0; background:rgba(0,0,0,0.88); display:flex; align-items:center; justify-content:center; z-index:100; backdrop-filter:blur(4px); }
-.config-box { background:var(--surface); border:1px solid var(--border); padding:40px; width:520px; max-width:92vw; max-height:90vh; overflow-y:auto; }
+.config-box { background:var(--surface); border:1px solid var(--border); padding:40px; width:500px; max-width:92vw; }
 .config-title { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:0.15em; margin-bottom:6px; }
 .config-sub { font-size:13px; color:var(--text-mid); margin-bottom:28px; line-height:1.5; }
 .field { margin-bottom:18px; }
@@ -92,8 +86,6 @@ body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif
 .field-input:focus { border-color:var(--text-mid); }
 .connect-btn { width:100%; background:var(--red); border:none; color:white; font-family:'Bebas Neue',sans-serif; font-size:15px; letter-spacing:0.2em; padding:13px; cursor:pointer; margin-top:8px; transition:opacity 0.15s; }
 .connect-btn:hover { opacity:0.85; }
-.connect-btn.secondary { background:transparent; border:1px solid var(--border); color:var(--text-dim); margin-top:6px; }
-.connect-btn.secondary:hover { border-color:var(--text-mid); color:var(--text); opacity:1; }
 .divider { border:none; border-top:1px solid var(--border); margin:24px 0; }
 .google-section { text-align:center; }
 .google-label { font-family:'DM Mono',monospace; font-size:10px; color:var(--text-dim); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:14px; }
@@ -123,15 +115,7 @@ body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif
       <div class="field-label">Trello Token</div>
       <input class="field-input" id="tokenInput" type="text" placeholder="Your Trello Token" autocomplete="off">
     </div>
-    <button class="connect-btn" onclick="loadWorkspaces()">LOAD WORKSPACES</button>
-    <div id="workspaceSection" style="display:none; margin-top:20px;">
-      <div class="workspace-select">
-        <div class="workspace-label">Select Workspaces to Show</div>
-        <div class="workspace-options" id="workspaceList"></div>
-      </div>
-      <button class="connect-btn" onclick="saveConfig()">SAVE & CONNECT</button>
-      <button class="connect-btn secondary" onclick="selectAllWorkspaces()">SELECT ALL</button>
-    </div>
+    <button class="connect-btn" onclick="saveTrelloConfig()">CONNECT TRELLO</button>
     <hr class="divider">
     <div class="google-section">
       <div class="google-label">Google Calendar</div>
@@ -199,6 +183,13 @@ const GOOGLE_CLIENT_ID = '490948018692-b11olpuqqlq5ekij0t0jgltd8i4fmaoj.apps.goo
 const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 const TRELLO_KEY = 'studioCommand_trello';
 const GTOKEN_KEY = 'studioCommand_googleToken';
+
+// Single source of truth — only read from Studio Command board
+// Butler automation feeds cards here from all other boards
+const BOARD_IDS = [
+  '69c6ce201e1c0c35ee5cab2f'  // // Studio Command
+];
+
 const CALENDARS = [
   { id: 'primary', label: 'Stoke Foundry', cls: 'stoke' },
   { id: 'c_2c775bafd021b5e84298f4b5c65b27fd1aa2cd4de7db5963ed2d659f80212330@group.calendar.google.com', label: 'TCR Media', cls: 'tcr' }
@@ -223,49 +214,15 @@ function showConfig() {
   const cfg = getTrello();
   if (cfg.key) document.getElementById('apiKeyInput').value = cfg.key;
   if (cfg.token) document.getElementById('tokenInput').value = cfg.token;
-  if (cfg.key && cfg.token) loadWorkspaces(true);
   updateCalStatus();
   document.getElementById('configOverlay').style.display = 'flex';
 }
 
-async function loadWorkspaces(silent) {
+function saveTrelloConfig() {
   const key = document.getElementById('apiKeyInput').value.trim();
   const token = document.getElementById('tokenInput').value.trim();
-  if (!key || !token) { if (!silent) alert('Enter both API Key and Token first.'); return; }
-  try {
-    const r = await fetch(`https://api.trello.com/1/members/me/organizations?key=${key}&token=${token}`);
-    if (!r.ok) throw new Error('Invalid credentials');
-    const orgs = await r.json();
-    const cfg = getTrello();
-    const saved = cfg.workspaceIds || [];
-    const list = document.getElementById('workspaceList');
-    list.innerHTML = orgs.map(o => `
-      <label class="workspace-option">
-        <input type="checkbox" value="${o.id}" data-name="${esc(o.displayName)}" ${saved.includes(o.id)?'checked':''}>
-        ${esc(o.displayName)}
-        <span style="margin-left:auto;font-family:'DM Mono',monospace;font-size:9px;color:var(--text-dim);">${esc(o.name)}</span>
-      </label>
-    `).join('');
-    document.getElementById('workspaceSection').style.display = 'block';
-  } catch(e) {
-    alert('Could not load workspaces: ' + e.message);
-  }
-}
-
-function selectAllWorkspaces() {
-  document.querySelectorAll('#workspaceList input[type=checkbox]').forEach(cb => cb.checked = true);
-}
-
-function saveConfig() {
-  const key = document.getElementById('apiKeyInput').value.trim();
-  const token = document.getElementById('tokenInput').value.trim();
-  const checked = [...document.querySelectorAll('#workspaceList input[type=checkbox]:checked')];
-  const workspaceIds = checked.map(cb => cb.value);
-  const workspaceNames = {};
-  checked.forEach(cb => workspaceNames[cb.value] = cb.dataset.name);
   if (!key || !token) { alert('Enter both API Key and Token.'); return; }
-  if (!workspaceIds.length) { alert('Select at least one workspace.'); return; }
-  localStorage.setItem(TRELLO_KEY, JSON.stringify({ key, token, workspaceIds, workspaceNames }));
+  localStorage.setItem(TRELLO_KEY, JSON.stringify({key, token}));
   document.getElementById('configOverlay').style.display = 'none';
   loadTrelloTasks();
 }
@@ -338,15 +295,15 @@ function renderCal(events) {
   }
 
   function renderDay(label, dayEvents) {
-    if (!dayEvents.length) return '<div style="margin-bottom:20px;"><div class="panel-label" style="margin-bottom:12px;">'+label+'</div><div class="empty">Nothing scheduled</div></div>';
+    if (!dayEvents.length) return `<div style="margin-bottom:20px;"><div class="panel-label" style="margin-bottom:12px;">${label}</div><div class="empty">Nothing scheduled</div></div>`;
     const allDay = dayEvents.filter(e => e.start && e.start.date && !e.start.dateTime);
     const timed = dayEvents.filter(e => e.start && e.start.dateTime).sort((a,b) => new Date(a.start.dateTime)-new Date(b.start.dateTime));
-    let h = '<div style="margin-bottom:24px;"><div class="panel-label" style="margin-bottom:12px;">'+label+'</div>';
+    let h = `<div style="margin-bottom:24px;"><div class="panel-label" style="margin-bottom:12px;">${label}</div>`;
     allDay.forEach(e => {
-      h += '<div class="time-block"><div class="time-label" style="font-size:9px;line-height:1.2;">ALL<br>DAY</div><div class="event-slot all-day"><div class="event-name">'+esc(e.summary||'Untitled')+'</div><div class="event-time">'+e._label+'</div></div></div>';
+      h += `<div class="time-block"><div class="time-label" style="font-size:9px;line-height:1.2;">ALL<br>DAY</div><div class="event-slot all-day"><div class="event-name">${esc(e.summary||'Untitled')}</div><div class="event-time">${e._label}</div></div></div>`;
     });
     timed.forEach(e => {
-      h += '<div class="time-block"><div class="time-label">'+ft(e.start.dateTime)+'</div><div class="event-slot '+e._cls+'"><div class="event-name">'+esc(e.summary||'Untitled')+'</div><div class="event-time">'+ft(e.start.dateTime)+' — '+ft(e.end.dateTime)+' · '+e._label+'</div>'+(e.location?'<div class="event-location">'+esc(e.location)+'</div>':'')+'</div></div>';
+      h += `<div class="time-block"><div class="time-label">${ft(e.start.dateTime)}</div><div class="event-slot ${e._cls}"><div class="event-name">${esc(e.summary||'Untitled')}</div><div class="event-time">${ft(e.start.dateTime)} — ${ft(e.end.dateTime)} · ${e._label}</div>${e.location?`<div class="event-location">${esc(e.location)}</div>`:''}</div></div>`;
     });
     h += '</div>';
     return h;
@@ -358,8 +315,8 @@ function renderCal(events) {
 async function trelloGet(path) {
   const cfg = getTrello();
   const sep = path.includes('?')?'&':'?';
-  const r = await fetch('https://api.trello.com/1'+path+sep+'key='+cfg.key+'&token='+cfg.token);
-  if (!r.ok) throw new Error('Trello '+r.status);
+  const r = await fetch(`https://api.trello.com/1${path}${sep}key=${cfg.key}&token=${cfg.token}`);
+  if (!r.ok) throw new Error(`Trello ${r.status}`);
   return r.json();
 }
 
@@ -369,110 +326,60 @@ async function loadTrelloTasks() {
     ['fireTasks','weekTasks','doneTasks'].forEach(id => document.getElementById(id).innerHTML='<div class="empty">Connect Trello first</div>');
     return;
   }
-  const workspaceIds = cfg.workspaceIds || [];
-  const workspaceNames = cfg.workspaceNames || {};
-  if (!workspaceIds.length) {
-    document.getElementById('fireTasks').innerHTML = '<div class="empty">No workspaces selected — open settings to configure</div>';
-    return;
-  }
-  try {
-    const boardArrays = await Promise.all(workspaceIds.map(wsId =>
-      trelloGet('/organizations/'+wsId+'/boards?filter=open&fields=id,name,idOrganization')
-        .then(boards => boards.map(b => ({ ...b, _wsName: workspaceNames[wsId] || wsId })))
-        .catch(() => [])
-    ));
-    const allBoards = boardArrays.flat();
-    if (!allBoards.length) {
-      document.getElementById('fireTasks').innerHTML = '<div class="empty">No open boards found</div>';
-      return;
-    }
 
-    const boardData = await Promise.all(allBoards.map(async board => {
-      const [lists, cards] = await Promise.all([
-        trelloGet('/boards/'+board.id+'/lists?fields=id,name'),
-        trelloGet('/boards/'+board.id+'/cards?fields=name,due,dueComplete,idList,shortUrl,dateLastActivity')
+  try {
+    // Fetch all boards in parallel
+    const boardData = await Promise.all(BOARD_IDS.map(async boardId => {
+      const [board, lists, cards] = await Promise.all([
+        trelloGet(`/boards/${boardId}?fields=name`),
+        trelloGet(`/boards/${boardId}/lists?fields=id,name`),
+        trelloGet(`/boards/${boardId}/cards?fields=name,due,dueComplete,idList,shortUrl,dateLastActivity`)
       ]);
       return { board, lists, cards };
     }));
 
     const fire = [], week = [], done = [];
-    const now = new Date();
     const weekAgo = new Date(Date.now() - 7*86400000);
-    const weekAhead = new Date(Date.now() + 7*86400000);
 
-    boardData.forEach(function(item) {
-      var board = item.board, lists = item.lists, cards = item.cards;
-      var lm = {};
-      lists.forEach(function(l) { lm[l.id] = l.name; });
+    boardData.forEach(({ board, lists, cards }) => {
+      const lm = {};
+      lists.forEach(l => lm[l.id] = l.name);
 
-      cards.forEach(function(c) {
-        var listName = (lm[c.idList] || '').toLowerCase();
-        var card = Object.assign({}, c, { _boardName: board.name, _wsName: board._wsName });
-        var dueDate = c.due ? new Date(c.due) : null;
-        var lastActive = c.dateLastActivity ? new Date(c.dateLastActivity) : null;
+      cards.forEach(c => {
+        const listName = lm[c.idList] || '';
+        const card = { ...c, _boardName: board.name };
+        const lastActive = c.dateLastActivity ? new Date(c.dateLastActivity) : null;
 
-        // Skip backlog entirely
-        if (listName.includes('backlog')) return;
-
-        // Done cards — only if active in last 7 days
-        if (c.dueComplete || listName.includes('done')) {
+        if ((listName.includes('On Fire') || listName.includes('Overdue')) && !c.dueComplete) {
+          fire.push(card);
+        } else if ((listName.includes('This Week') || listName.includes('In Flight')) && !c.dueComplete) {
+          week.push(card);
+        } else if (listName.includes('Done') || c.dueComplete) {
           if (lastActive && lastActive > weekAgo) done.push(card);
-          return;
-        }
-
-        // Overdue — past due date, not complete
-        if (dueDate && dueDate < now) {
-          fire.push(card);
-          return;
-        }
-
-        // Explicit fire list names
-        if (listName.includes('on fire') || listName.includes('overdue')) {
-          fire.push(card);
-          return;
-        }
-
-        // Due within next 7 days
-        if (dueDate && dueDate <= weekAhead) {
-          week.push(card);
-          return;
-        }
-
-        // Explicit this-week list names (no due date)
-        if (listName.includes('this week') || listName.includes('in flight')) {
-          week.push(card);
-          return;
         }
       });
     });
 
-    var byDue = function(a) {
-      return a.sort(function(x,y) {
-        if (!x.due && !y.due) return 0;
-        if (!x.due) return 1;
-        if (!y.due) return -1;
-        return new Date(x.due) - new Date(y.due);
-      });
-    };
-
+    const byDue = a => a.sort((x,y) => (!x.due&&!y.due)?0:!x.due?1:!y.due?-1:new Date(x.due)-new Date(y.due));
     renderTasks('fireTasks', 'fireCount', byDue(fire), 'fire');
     renderTasks('weekTasks', 'weekCount', byDue(week), 'week');
     renderTasks('doneTasks', 'doneCount', done, 'done');
     document.getElementById('statusDot').style.background = 'var(--green)';
     document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+
   } catch(e) {
-    document.getElementById('fireTasks').innerHTML = '<div class="error-msg">Trello error: '+e.message+'</div>';
+    document.getElementById('fireTasks').innerHTML = `<div class="error-msg">Trello error: ${e.message}</div>`;
     document.getElementById('statusDot').style.background = 'var(--red)';
   }
 }
 
 function renderTasks(cid, kid, cards, type) {
-  document.getElementById(kid).textContent = cards.length + ' card' + (cards.length!==1?'s':'');
+  document.getElementById(kid).textContent = `${cards.length} card${cards.length!==1?'s':''}`;
   if (!cards.length) { document.getElementById(cid).innerHTML = '<div class="empty">Nothing here</div>'; return; }
-  document.getElementById(cid).innerHTML = cards.map(function(c) {
-    var d = type==='done' ? doneS(c.due) : dueS(c.due);
-    var boardLabel = c._boardName ? '<div class="task-board">'+esc(c._boardName)+'</div>' : '';
-    return '<div class="task-card" onclick="window.open(\''+c.shortUrl+'\',\'_blank\')"><div class="task-indicator '+type+'"></div><div style="flex:1;min-width:0;"><div class="task-name">'+esc(c.name)+'</div>'+(c.due?'<div class="task-due '+d.cls+'">'+d.label+'</div>':'')+boardLabel+'</div></div>';
+  document.getElementById(cid).innerHTML = cards.map(c => {
+    const d = type==='done' ? doneS(c.due) : dueS(c.due);
+    const boardLabel = c._boardName ? `<div class="task-board">${esc(c._boardName)}</div>` : '';
+    return `<div class="task-card" onclick="window.open('${c.shortUrl}','_blank')"><div class="task-indicator ${type}"></div><div style="flex:1;min-width:0;"><div class="task-name">${esc(c.name)}</div>${c.due?`<div class="task-due ${d.cls}">${d.label}</div>`:''} ${boardLabel}</div></div>`;
   }).join('');
 }
 
@@ -481,28 +388,28 @@ function ft(dt) { return dt ? new Date(dt).toLocaleTimeString('en-US',{hour:'num
 
 function dueS(due) {
   if (!due) return {label:'',cls:'normal'};
-  var d = (new Date(due) - Date.now()) / 86400000;
-  if (d < 0) return {label:'OVERDUE', cls:'overdue'};
-  if (d < 1) return {label:'TODAY', cls:'today'};
-  if (d < 2) return {label:'TOMORROW', cls:'soon'};
-  return {label: new Date(due).toLocaleDateString('en-US',{month:'short',day:'numeric'}), cls:'normal'};
+  const d = (new Date(due)-Date.now())/86400000;
+  if (d<0) return {label:'OVERDUE',cls:'overdue'};
+  if (d<1) return {label:'TODAY',cls:'today'};
+  if (d<2) return {label:'TOMORROW',cls:'soon'};
+  return {label:new Date(due).toLocaleDateString('en-US',{month:'short',day:'numeric'}),cls:'normal'};
 }
 
 function doneS(due) {
-  if (!due) return {label:'DONE', cls:'complete'};
-  return {label: new Date(due).toLocaleDateString('en-US',{month:'short',day:'numeric'}), cls:'complete'};
+  if (!due) return {label:'DONE',cls:'complete'};
+  return {label:new Date(due).toLocaleDateString('en-US',{month:'short',day:'numeric'}),cls:'complete'};
 }
 
 function loadAll() {
-  var now = new Date();
-  document.getElementById('datestamp').innerHTML = now.toLocaleDateString('en-US',{weekday:'long'}) + '<span>, </span>' + now.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-  var cfg = getTrello();
+  const now = new Date();
+  document.getElementById('datestamp').innerHTML = `${now.toLocaleDateString('en-US',{weekday:'long'})}<span>, </span>${now.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}`;
+  const cfg = getTrello();
   if (!cfg.key) { showConfig(); return; }
   loadTrelloTasks();
   loadCalendar();
 }
 
-window.addEventListener('load', function() { initGoogleAuth(); loadAll(); });
+window.addEventListener('load', () => { initGoogleAuth(); loadAll(); });
 </script>
 </body>
 </html>
