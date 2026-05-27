@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -166,7 +165,7 @@ body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif
 
 <div class="main">
   <div class="panel">
-    <div class="panel-label">Today &amp; Tomorrow</div>
+    <div class="panel-label">Today & Tomorrow</div>
     <div id="calLoading" class="loading">Sign in with Google to load calendar</div>
     <div id="calContent"></div>
   </div>
@@ -334,35 +333,33 @@ function renderCal(events) {
   const tomorrowStr = new Date(now.getFullYear(), now.getMonth(), now.getDate()+1).toDateString();
 
   function isDay(e, dayStr) {
-    const d = e.start?.dateTime ? new Date(e.start.dateTime) : e.start?.date ? new Date(e.start.date+'T00:00:00') : null;
+    const d = e.start && e.start.dateTime ? new Date(e.start.dateTime) : e.start && e.start.date ? new Date(e.start.date+'T00:00:00') : null;
     return d && d.toDateString() === dayStr;
   }
 
   function renderDay(label, dayEvents) {
-    if (!dayEvents.length) return `<div style="margin-bottom:20px;"><div class="panel-label" style="margin-bottom:12px;">${label}</div><div class="empty">Nothing scheduled</div></div>`;
-    const allDay = dayEvents.filter(e => e.start?.date && !e.start?.dateTime);
-    const timed = dayEvents.filter(e => e.start?.dateTime).sort((a,b) => new Date(a.start.dateTime)-new Date(b.start.dateTime));
-    let h = `<div style="margin-bottom:24px;"><div class="panel-label" style="margin-bottom:12px;">${label}</div>`;
+    if (!dayEvents.length) return '<div style="margin-bottom:20px;"><div class="panel-label" style="margin-bottom:12px;">'+label+'</div><div class="empty">Nothing scheduled</div></div>';
+    const allDay = dayEvents.filter(e => e.start && e.start.date && !e.start.dateTime);
+    const timed = dayEvents.filter(e => e.start && e.start.dateTime).sort((a,b) => new Date(a.start.dateTime)-new Date(b.start.dateTime));
+    let h = '<div style="margin-bottom:24px;"><div class="panel-label" style="margin-bottom:12px;">'+label+'</div>';
     allDay.forEach(e => {
-      h += `<div class="time-block"><div class="time-label" style="font-size:9px;line-height:1.2;">ALL<br>DAY</div><div class="event-slot all-day"><div class="event-name">${esc(e.summary||'Untitled')}</div><div class="event-time">${e._label}</div></div></div>`;
+      h += '<div class="time-block"><div class="time-label" style="font-size:9px;line-height:1.2;">ALL<br>DAY</div><div class="event-slot all-day"><div class="event-name">'+esc(e.summary||'Untitled')+'</div><div class="event-time">'+e._label+'</div></div></div>';
     });
     timed.forEach(e => {
-      h += `<div class="time-block"><div class="time-label">${ft(e.start.dateTime)}</div><div class="event-slot ${e._cls}"><div class="event-name">${esc(e.summary||'Untitled')}</div><div class="event-time">${ft(e.start.dateTime)} — ${ft(e.end.dateTime)} · ${e._label}</div>${e.location?`<div class="event-location">${esc(e.location)}</div>`:''}</div></div>`;
+      h += '<div class="time-block"><div class="time-label">'+ft(e.start.dateTime)+'</div><div class="event-slot '+e._cls+'"><div class="event-name">'+esc(e.summary||'Untitled')+'</div><div class="event-time">'+ft(e.start.dateTime)+' — '+ft(e.end.dateTime)+' · '+e._label+'</div>'+(e.location?'<div class="event-location">'+esc(e.location)+'</div>':'')+'</div></div>';
     });
     h += '</div>';
     return h;
   }
 
-  const todayEvents = events.filter(e => isDay(e, todayStr));
-  const tomorrowEvents = events.filter(e => isDay(e, tomorrowStr));
-  el.innerHTML = renderDay('TODAY', todayEvents) + renderDay('TOMORROW', tomorrowEvents);
+  el.innerHTML = renderDay('TODAY', events.filter(e => isDay(e, todayStr))) + renderDay('TOMORROW', events.filter(e => isDay(e, tomorrowStr)));
 }
 
 async function trelloGet(path) {
   const cfg = getTrello();
   const sep = path.includes('?')?'&':'?';
-  const r = await fetch(`https://api.trello.com/1${path}${sep}key=${cfg.key}&token=${cfg.token}`);
-  if (!r.ok) throw new Error(`Trello ${r.status}`);
+  const r = await fetch('https://api.trello.com/1'+path+sep+'key='+cfg.key+'&token='+cfg.token);
+  if (!r.ok) throw new Error('Trello '+r.status);
   return r.json();
 }
 
@@ -375,103 +372,137 @@ async function loadTrelloTasks() {
   const workspaceIds = cfg.workspaceIds || [];
   const workspaceNames = cfg.workspaceNames || {};
   if (!workspaceIds.length) {
-    document.getElementById('fireTasks').innerHTML = '<div class="empty">No workspaces selected — open ⚙ to configure</div>';
+    document.getElementById('fireTasks').innerHTML = '<div class="empty">No workspaces selected — open settings to configure</div>';
     return;
   }
   try {
-    const boardFetches = workspaceIds.map(wsId =>
-      trelloGet(`/organizations/${wsId}/boards?filter=open&fields=id,name,idOrganization`)
+    const boardArrays = await Promise.all(workspaceIds.map(wsId =>
+      trelloGet('/organizations/'+wsId+'/boards?filter=open&fields=id,name,idOrganization')
         .then(boards => boards.map(b => ({ ...b, _wsName: workspaceNames[wsId] || wsId })))
         .catch(() => [])
-    );
-    const boardArrays = await Promise.all(boardFetches);
+    ));
     const allBoards = boardArrays.flat();
     if (!allBoards.length) {
-      document.getElementById('fireTasks').innerHTML = '<div class="empty">No open boards found in selected workspaces</div>';
+      document.getElementById('fireTasks').innerHTML = '<div class="empty">No open boards found</div>';
       return;
     }
+
     const boardData = await Promise.all(allBoards.map(async board => {
       const [lists, cards] = await Promise.all([
-        trelloGet(`/boards/${board.id}/lists?fields=id,name`),
-        trelloGet(`/boards/${board.id}/cards?fields=name,due,dueComplete,idList,shortUrl,dateLastActivity`)
+        trelloGet('/boards/'+board.id+'/lists?fields=id,name'),
+        trelloGet('/boards/'+board.id+'/cards?fields=name,due,dueComplete,idList,shortUrl,dateLastActivity')
       ]);
       return { board, lists, cards };
     }));
 
     const fire = [], week = [], done = [];
-    const weekAgo = new Date(Date.now() - 7 * 86400000);
+    const now = new Date();
+    const weekAgo = new Date(Date.now() - 7*86400000);
+    const weekAhead = new Date(Date.now() + 7*86400000);
 
-    boardData.forEach(({ board, lists, cards }) => {
-      const lm = {};
-      lists.forEach(l => lm[l.id] = l.name);
-      cards.forEach(c => {
-        const listName = lm[c.idList] || '';
-        const cardWithMeta = { ...c, _boardName: board.name, _wsName: board._wsName };
-        if ((listName.toLowerCase().includes('on fire') || listName.toLowerCase().includes('overdue')) && !c.dueComplete) {
-          fire.push(cardWithMeta);
-        } else if ((listName.toLowerCase().includes('this week') || listName.toLowerCase().includes('in flight')) && !c.dueComplete) {
-          week.push(cardWithMeta);
-        } else if (listName.toLowerCase().includes('done') || c.dueComplete) {
-          const lastActive = c.dateLastActivity ? new Date(c.dateLastActivity) : null;
-          if (lastActive && lastActive > weekAgo) {
-            done.push(cardWithMeta);
-          }
+    boardData.forEach(function(item) {
+      var board = item.board, lists = item.lists, cards = item.cards;
+      var lm = {};
+      lists.forEach(function(l) { lm[l.id] = l.name; });
+
+      cards.forEach(function(c) {
+        var listName = (lm[c.idList] || '').toLowerCase();
+        var card = Object.assign({}, c, { _boardName: board.name, _wsName: board._wsName });
+        var dueDate = c.due ? new Date(c.due) : null;
+        var lastActive = c.dateLastActivity ? new Date(c.dateLastActivity) : null;
+
+        // Skip backlog entirely
+        if (listName.includes('backlog')) return;
+
+        // Done cards — only if active in last 7 days
+        if (c.dueComplete || listName.includes('done')) {
+          if (lastActive && lastActive > weekAgo) done.push(card);
+          return;
+        }
+
+        // Overdue — past due date, not complete
+        if (dueDate && dueDate < now) {
+          fire.push(card);
+          return;
+        }
+
+        // Explicit fire list names
+        if (listName.includes('on fire') || listName.includes('overdue')) {
+          fire.push(card);
+          return;
+        }
+
+        // Due within next 7 days
+        if (dueDate && dueDate <= weekAhead) {
+          week.push(card);
+          return;
+        }
+
+        // Explicit this-week list names (no due date)
+        if (listName.includes('this week') || listName.includes('in flight')) {
+          week.push(card);
+          return;
         }
       });
     });
 
-    const byDue = a => a.sort((x,y) => (!x.due&&!y.due)?0:!x.due?1:!y.due?-1:new Date(x.due)-new Date(y.due));
+    var byDue = function(a) {
+      return a.sort(function(x,y) {
+        if (!x.due && !y.due) return 0;
+        if (!x.due) return 1;
+        if (!y.due) return -1;
+        return new Date(x.due) - new Date(y.due);
+      });
+    };
+
     renderTasks('fireTasks', 'fireCount', byDue(fire), 'fire');
     renderTasks('weekTasks', 'weekCount', byDue(week), 'week');
     renderTasks('doneTasks', 'doneCount', done, 'done');
     document.getElementById('statusDot').style.background = 'var(--green)';
     document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
   } catch(e) {
-    document.getElementById('fireTasks').innerHTML = `<div class="error-msg">Trello error: ${e.message}</div>`;
+    document.getElementById('fireTasks').innerHTML = '<div class="error-msg">Trello error: '+e.message+'</div>';
     document.getElementById('statusDot').style.background = 'var(--red)';
   }
 }
 
 function renderTasks(cid, kid, cards, type) {
-  document.getElementById(kid).textContent = `${cards.length} card${cards.length!==1?'s':''}`;
+  document.getElementById(kid).textContent = cards.length + ' card' + (cards.length!==1?'s':'');
   if (!cards.length) { document.getElementById(cid).innerHTML = '<div class="empty">Nothing here</div>'; return; }
-  document.getElementById(cid).innerHTML = cards.map(c => {
-    const d = type==='done' ? doneS(c.due) : dueS(c.due);
-    const boardLabel = c._boardName ? `<div class="task-board">${esc(c._boardName)}</div>` : '';
-    return `<div class="task-card" onclick="window.open('${c.shortUrl}','_blank')"><div class="task-indicator ${type}"></div><div style="flex:1;min-width:0;"><div class="task-name">${esc(c.name)}</div>${c.due?`<div class="task-due ${d.cls}">${d.label}</div>`:''} ${boardLabel}</div></div>`;
+  document.getElementById(cid).innerHTML = cards.map(function(c) {
+    var d = type==='done' ? doneS(c.due) : dueS(c.due);
+    var boardLabel = c._boardName ? '<div class="task-board">'+esc(c._boardName)+'</div>' : '';
+    return '<div class="task-card" onclick="window.open(\''+c.shortUrl+'\',\'_blank\')"><div class="task-indicator '+type+'"></div><div style="flex:1;min-width:0;"><div class="task-name">'+esc(c.name)+'</div>'+(c.due?'<div class="task-due '+d.cls+'">'+d.label+'</div>':'')+boardLabel+'</div></div>';
   }).join('');
 }
 
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function ft(dt) { return dt?new Date(dt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true}):''; }
+function ft(dt) { return dt ? new Date(dt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true}) : ''; }
 
 function dueS(due) {
   if (!due) return {label:'',cls:'normal'};
-  const d=(new Date(due)-Date.now())/86400000;
-  if (d<0) return {label:'OVERDUE',cls:'overdue'};
-  if (d<1) return {label:'TODAY',cls:'today'};
-  if (d<2) return {label:'TOMORROW',cls:'soon'};
-  return {label:new Date(due).toLocaleDateString('en-US',{month:'short',day:'numeric'}),cls:'normal'};
+  var d = (new Date(due) - Date.now()) / 86400000;
+  if (d < 0) return {label:'OVERDUE', cls:'overdue'};
+  if (d < 1) return {label:'TODAY', cls:'today'};
+  if (d < 2) return {label:'TOMORROW', cls:'soon'};
+  return {label: new Date(due).toLocaleDateString('en-US',{month:'short',day:'numeric'}), cls:'normal'};
 }
 
 function doneS(due) {
-  if (!due) return {label:'DONE',cls:'complete'};
-  return {label:new Date(due).toLocaleDateString('en-US',{month:'short',day:'numeric'}),cls:'complete'};
+  if (!due) return {label:'DONE', cls:'complete'};
+  return {label: new Date(due).toLocaleDateString('en-US',{month:'short',day:'numeric'}), cls:'complete'};
 }
 
 function loadAll() {
-  const now = new Date();
-  document.getElementById('datestamp').innerHTML=`${now.toLocaleDateString('en-US',{weekday:'long'})}<span>, </span>${now.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}`;
-  const cfg = getTrello();
+  var now = new Date();
+  document.getElementById('datestamp').innerHTML = now.toLocaleDateString('en-US',{weekday:'long'}) + '<span>, </span>' + now.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  var cfg = getTrello();
   if (!cfg.key) { showConfig(); return; }
   loadTrelloTasks();
   loadCalendar();
 }
 
-window.addEventListener('load', () => { initGoogleAuth(); loadAll(); });
+window.addEventListener('load', function() { initGoogleAuth(); loadAll(); });
 </script>
 </body>
 </html>
-```
-
-Select all of that, copy, paste into GitHub. Done.
