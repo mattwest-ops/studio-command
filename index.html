@@ -7,105 +7,106 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
-  :root {
-    --bg: #0a0a0a;
-    --surface: #111111;
-    --surface2: #1a1a1a;
-    --border: #222222;
-    --text: #e8e8e8;
-    --text-dim: #666666;
-    --text-mid: #999999;
-    --red: #ff3b3b;
-    --orange: #ff8c00;
-    --green: #00c853;
-    --yellow: #ffd600;
-    --blue: #4fc3f7;
-  }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; min-height:100vh; }
-
-  .header { padding:28px 40px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:flex-end; }
-  .wordmark { font-family:'Bebas Neue',sans-serif; font-size:11px; letter-spacing:0.35em; color:var(--text-dim); margin-bottom:4px; }
-  .datestamp { font-family:'DM Mono',monospace; font-size:28px; font-weight:300; letter-spacing:-0.02em; line-height:1; }
-  .datestamp span { color:var(--red); }
-  .header-right { display:flex; align-items:center; gap:12px; }
-  .status-dot { width:6px; height:6px; border-radius:50%; background:var(--text-dim); animation:pulse 2s ease-in-out infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-  .last-updated { font-family:'DM Mono',monospace; font-size:11px; color:var(--text-dim); }
-  .btn { background:none; border:1px solid var(--border); color:var(--text-dim); font-family:'DM Mono',monospace; font-size:11px; letter-spacing:0.1em; padding:6px 14px; cursor:pointer; transition:all 0.15s; }
-  .btn:hover { border-color:var(--text-mid); color:var(--text); }
-  .btn.ghost { border-color:transparent; }
-
-  .main { display:grid; grid-template-columns:1fr 1fr; height:calc(100vh - 89px); }
-  .panel { padding:28px 36px; overflow-y:auto; border-right:1px solid var(--border); }
-  .panel:last-child { border-right:none; padding:0; }
-  .panel-label { font-family:'Bebas Neue',sans-serif; font-size:11px; letter-spacing:0.35em; color:var(--text-dim); margin-bottom:20px; display:flex; align-items:center; gap:10px; }
-  .panel-label::after { content:''; flex:1; height:1px; background:var(--border); }
-
-  .time-block { display:flex; gap:14px; min-height:50px; position:relative; margin-bottom:2px; }
-  .time-block:not(:last-child)::after { content:''; position:absolute; left:48px; bottom:0; right:0; height:1px; background:var(--border); opacity:0.4; }
-  .time-label { font-family:'DM Mono',monospace; font-size:10px; color:var(--text-dim); width:40px; flex-shrink:0; padding-top:14px; letter-spacing:0.05em; }
-  .event-slot { flex:1; padding:10px 14px; background:var(--surface); border-left:2px solid var(--blue); margin:4px 0; transition:background 0.15s; }
-  .event-slot:hover { background:var(--surface2); }
-  .event-slot.all-day { border:1px solid var(--border); border-left:2px solid var(--text-dim); background:transparent; }
-  .event-slot.stoke { border-left-color:var(--orange); }
-  .event-slot.tcr { border-left-color:var(--yellow); }
-  .event-name { font-size:13px; font-weight:500; line-height:1.3; }
-  .event-time { font-family:'DM Mono',monospace; font-size:10px; color:var(--text-dim); margin-top:3px; }
-  .event-location { font-size:11px; color:var(--text-mid); margin-top:2px; }
-
-  .task-section { padding:24px 36px; border-bottom:1px solid var(--border); }
-  .task-section:last-child { border-bottom:none; }
-  .section-header { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
-  .section-tag { font-family:'Bebas Neue',sans-serif; font-size:11px; letter-spacing:0.3em; padding:3px 10px; border:1px solid; }
-  .section-tag.fire { color:var(--red); border-color:var(--red); background:rgba(255,59,59,0.06); }
-  .section-tag.week { color:var(--orange); border-color:var(--orange); background:rgba(255,140,0,0.06); }
-  .section-tag.done { color:var(--green); border-color:var(--green); background:rgba(0,200,83,0.06); }
-  .section-count { font-family:'DM Mono',monospace; font-size:11px; color:var(--text-dim); }
-
-  .task-card { display:flex; align-items:flex-start; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); cursor:pointer; transition:padding-left 0.15s; }
-  .task-card:last-child { border-bottom:none; }
-  .task-card:hover { padding-left:6px; }
-  .task-indicator { width:3px; height:32px; flex-shrink:0; margin-top:2px; }
-  .task-indicator.fire { background:var(--red); }
-  .task-indicator.week { background:var(--orange); }
-  .task-indicator.done { background:var(--green); }
-  .task-name { font-size:13px; font-weight:500; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .task-due { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:0.05em; margin-top:3px; }
-  .task-due.overdue { color:var(--red); }
-  .task-due.today { color:var(--orange); }
-  .task-due.soon { color:var(--yellow); }
-  .task-due.normal { color:var(--text-dim); }
-  .task-due.complete { color:var(--green); }
-
-  .loading { font-family:'DM Mono',monospace; font-size:11px; color:var(--text-dim); padding:24px 0; letter-spacing:0.08em; }
-  .empty { font-family:'DM Mono',monospace; font-size:11px; color:var(--text-dim); padding:12px 0; }
-  .error-msg { font-family:'DM Mono',monospace; font-size:11px; color:var(--red); padding:12px 0; }
-
-  .overlay { position:fixed; inset:0; background:rgba(0,0,0,0.88); display:flex; align-items:center; justify-content:center; z-index:100; backdrop-filter:blur(4px); }
-  .config-box { background:var(--surface); border:1px solid var(--border); padding:40px; width:500px; max-width:92vw; }
-  .config-title { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:0.15em; margin-bottom:6px; }
-  .config-sub { font-size:13px; color:var(--text-mid); margin-bottom:28px; line-height:1.5; }
-  .field { margin-bottom:18px; }
-  .field-label { font-family:'DM Mono',monospace; font-size:10px; color:var(--text-dim); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:7px; }
-  .field-input { width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); font-family:'DM Mono',monospace; font-size:12px; padding:10px 14px; outline:none; transition:border-color 0.15s; }
-  .field-input:focus { border-color:var(--text-mid); }
-  .connect-btn { width:100%; background:var(--red); border:none; color:white; font-family:'Bebas Neue',sans-serif; font-size:15px; letter-spacing:0.2em; padding:13px; cursor:pointer; margin-top:8px; transition:opacity 0.15s; }
-  .connect-btn:hover { opacity:0.85; }
-  .divider { border:none; border-top:1px solid var(--border); margin:24px 0; }
-  .google-section { text-align:center; }
-  .google-label { font-family:'DM Mono',monospace; font-size:10px; color:var(--text-dim); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:14px; }
-  #googleSignInBtn { display:inline-flex; align-items:center; gap:10px; background:var(--surface2); border:1px solid var(--border); color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px; padding:10px 20px; cursor:pointer; transition:all 0.15s; }
-  #googleSignInBtn:hover { border-color:var(--text-mid); }
-  .cal-status { font-family:'DM Mono',monospace; font-size:11px; margin-top:10px; }
-  .cal-status.connected { color:var(--green); }
-  .cal-status.disconnected { color:var(--text-dim); }
-  .config-note { font-size:11px; color:var(--text-dim); margin-top:16px; line-height:1.6; }
-  .config-note a { color:var(--text-mid); }
-
-  ::-webkit-scrollbar { width:3px; }
-  ::-webkit-scrollbar-track { background:transparent; }
-  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+:root {
+--bg: #0a0a0a;
+--surface: #111111;
+--surface2: #1a1a1a;
+--border: #222222;
+--text: #e8e8e8;
+--text-dim: #666666;
+--text-mid: #999999;
+--red: #ff3b3b;
+--orange: #ff8c00;
+--green: #00c853;
+--yellow: #ffd600;
+--blue: #4fc3f7;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; min-height:100vh; }
+.header { padding:28px 40px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:flex-end; }
+.wordmark { font-family:'Bebas Neue',sans-serif; font-size:11px; letter-spacing:0.35em; color:var(--text-dim); margin-bottom:4px; }
+.datestamp { font-family:'DM Mono',monospace; font-size:28px; font-weight:300; letter-spacing:-0.02em; line-height:1; }
+.datestamp span { color:var(--red); }
+.header-right { display:flex; align-items:center; gap:12px; }
+.status-dot { width:6px; height:6px; border-radius:50%; background:var(--text-dim); animation:pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.last-updated { font-family:'DM Mono',monospace; font-size:11px; color:var(--text-dim); }
+.btn { background:none; border:1px solid var(--border); color:var(--text-dim); font-family:'DM Mono',monospace; font-size:11px; letter-spacing:0.1em; padding:6px 14px; cursor:pointer; transition:all 0.15s; }
+.btn:hover { border-color:var(--text-mid); color:var(--text); }
+.btn.ghost { border-color:transparent; }
+.main { display:grid; grid-template-columns:1fr 1fr; height:calc(100vh - 89px); }
+.panel { padding:28px 36px; overflow-y:auto; border-right:1px solid var(--border); }
+.panel:last-child { border-right:none; padding:0; }
+.panel-label { font-family:'Bebas Neue',sans-serif; font-size:11px; letter-spacing:0.35em; color:var(--text-dim); margin-bottom:20px; display:flex; align-items:center; gap:10px; }
+.panel-label::after { content:''; flex:1; height:1px; background:var(--border); }
+.time-block { display:flex; gap:14px; min-height:50px; position:relative; margin-bottom:2px; }
+.time-block:not(:last-child)::after { content:''; position:absolute; left:48px; bottom:0; right:0; height:1px; background:var(--border); opacity:0.4; }
+.time-label { font-family:'DM Mono',monospace; font-size:10px; color:var(--text-dim); width:40px; flex-shrink:0; padding-top:14px; letter-spacing:0.05em; }
+.event-slot { flex:1; padding:10px 14px; background:var(--surface); border-left:2px solid var(--blue); margin:4px 0; transition:background 0.15s; }
+.event-slot:hover { background:var(--surface2); }
+.event-slot.all-day { border:1px solid var(--border); border-left:2px solid var(--text-dim); background:transparent; }
+.event-slot.stoke { border-left-color:var(--orange); }
+.event-slot.tcr { border-left-color:var(--yellow); }
+.event-name { font-size:13px; font-weight:500; line-height:1.3; }
+.event-time { font-family:'DM Mono',monospace; font-size:10px; color:var(--text-dim); margin-top:3px; }
+.event-location { font-size:11px; color:var(--text-mid); margin-top:2px; }
+.task-section { padding:24px 36px; border-bottom:1px solid var(--border); }
+.task-section:last-child { border-bottom:none; }
+.section-header { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.section-tag { font-family:'Bebas Neue',sans-serif; font-size:11px; letter-spacing:0.3em; padding:3px 10px; border:1px solid; }
+.section-tag.fire { color:var(--red); border-color:var(--red); background:rgba(255,59,59,0.06); }
+.section-tag.week { color:var(--orange); border-color:var(--orange); background:rgba(255,140,0,0.06); }
+.section-tag.done { color:var(--green); border-color:var(--green); background:rgba(0,200,83,0.06); }
+.section-count { font-family:'DM Mono',monospace; font-size:11px; color:var(--text-dim); }
+.task-card { display:flex; align-items:flex-start; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); cursor:pointer; transition:padding-left 0.15s; }
+.task-card:last-child { border-bottom:none; }
+.task-card:hover { padding-left:6px; }
+.task-indicator { width:3px; height:32px; flex-shrink:0; margin-top:2px; }
+.task-indicator.fire { background:var(--red); }
+.task-indicator.week { background:var(--orange); }
+.task-indicator.done { background:var(--green); }
+.task-name { font-size:13px; font-weight:500; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.task-due { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:0.05em; margin-top:3px; }
+.task-due.overdue { color:var(--red); }
+.task-due.today { color:var(--orange); }
+.task-due.soon { color:var(--yellow); }
+.task-due.normal { color:var(--text-dim); }
+.task-due.complete { color:var(--green); }
+.task-board { font-family:'DM Mono',monospace; font-size:9px; color:var(--text-dim); letter-spacing:0.08em; margin-top:2px; text-transform:uppercase; }
+.loading { font-family:'DM Mono',monospace; font-size:11px; color:var(--text-dim); padding:24px 0; letter-spacing:0.08em; }
+.empty { font-family:'DM Mono',monospace; font-size:11px; color:var(--text-dim); padding:12px 0; }
+.error-msg { font-family:'DM Mono',monospace; font-size:11px; color:var(--red); padding:12px 0; }
+.workspace-select { margin-bottom:18px; }
+.workspace-label { font-family:'DM Mono',monospace; font-size:10px; color:var(--text-dim); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:7px; }
+.workspace-options { display:flex; flex-direction:column; gap:6px; max-height:160px; overflow-y:auto; }
+.workspace-option { display:flex; align-items:center; gap:10px; padding:8px 12px; background:var(--bg); border:1px solid var(--border); cursor:pointer; transition:border-color 0.15s; font-size:12px; }
+.workspace-option:hover { border-color:var(--text-mid); }
+.workspace-option input { accent-color:var(--red); }
+.overlay { position:fixed; inset:0; background:rgba(0,0,0,0.88); display:flex; align-items:center; justify-content:center; z-index:100; backdrop-filter:blur(4px); }
+.config-box { background:var(--surface); border:1px solid var(--border); padding:40px; width:520px; max-width:92vw; max-height:90vh; overflow-y:auto; }
+.config-title { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:0.15em; margin-bottom:6px; }
+.config-sub { font-size:13px; color:var(--text-mid); margin-bottom:28px; line-height:1.5; }
+.field { margin-bottom:18px; }
+.field-label { font-family:'DM Mono',monospace; font-size:10px; color:var(--text-dim); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:7px; }
+.field-input { width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); font-family:'DM Mono',monospace; font-size:12px; padding:10px 14px; outline:none; transition:border-color 0.15s; }
+.field-input:focus { border-color:var(--text-mid); }
+.connect-btn { width:100%; background:var(--red); border:none; color:white; font-family:'Bebas Neue',sans-serif; font-size:15px; letter-spacing:0.2em; padding:13px; cursor:pointer; margin-top:8px; transition:opacity 0.15s; }
+.connect-btn:hover { opacity:0.85; }
+.connect-btn.secondary { background:transparent; border:1px solid var(--border); color:var(--text-dim); margin-top:6px; }
+.connect-btn.secondary:hover { border-color:var(--text-mid); color:var(--text); opacity:1; }
+.divider { border:none; border-top:1px solid var(--border); margin:24px 0; }
+.google-section { text-align:center; }
+.google-label { font-family:'DM Mono',monospace; font-size:10px; color:var(--text-dim); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:14px; }
+#googleSignInBtn { display:inline-flex; align-items:center; gap:10px; background:var(--surface2); border:1px solid var(--border); color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px; padding:10px 20px; cursor:pointer; transition:all 0.15s; }
+#googleSignInBtn:hover { border-color:var(--text-mid); }
+.cal-status { font-family:'DM Mono',monospace; font-size:11px; margin-top:10px; }
+.cal-status.connected { color:var(--green); }
+.cal-status.disconnected { color:var(--text-dim); }
+.config-note { font-size:11px; color:var(--text-dim); margin-top:16px; line-height:1.6; }
+.config-note a { color:var(--text-mid); }
+::-webkit-scrollbar { width:3px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
 </style>
 </head>
 <body>
@@ -114,6 +115,7 @@
   <div class="config-box">
     <div class="config-title">// STUDIO COMMAND</div>
     <div class="config-sub">Connect your Trello and Google Calendar. Credentials are stored locally in your browser only.</div>
+
     <div class="field">
       <div class="field-label">Trello API Key</div>
       <input class="field-input" id="apiKeyInput" type="text" placeholder="Your Trello API Key" autocomplete="off">
@@ -122,7 +124,17 @@
       <div class="field-label">Trello Token</div>
       <input class="field-input" id="tokenInput" type="text" placeholder="Your Trello Token" autocomplete="off">
     </div>
-    <button class="connect-btn" onclick="saveTrelloConfig()">CONNECT TRELLO</button>
+    <button class="connect-btn" onclick="loadWorkspaces()">LOAD WORKSPACES</button>
+
+    <div id="workspaceSection" style="display:none; margin-top:20px;">
+      <div class="workspace-select">
+        <div class="workspace-label">Select Workspaces to Show</div>
+        <div class="workspace-options" id="workspaceList"></div>
+      </div>
+      <button class="connect-btn" onclick="saveConfig()">SAVE & CONNECT</button>
+      <button class="connect-btn secondary" onclick="selectAllWorkspaces()">SELECT ALL</button>
+    </div>
+
     <hr class="divider">
     <div class="google-section">
       <div class="google-label">Google Calendar</div>
@@ -190,13 +202,13 @@ const GOOGLE_CLIENT_ID = '490948018692-b11olpuqqlq5ekij0t0jgltd8i4fmaoj.apps.goo
 const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 const TRELLO_KEY = 'studioCommand_trello';
 const GTOKEN_KEY = 'studioCommand_googleToken';
-const BOARD_NAME = '// Studio Command';
 const CALENDARS = [
   { id: 'primary', label: 'Stoke Foundry', cls: 'stoke' },
   { id: 'c_2c775bafd021b5e84298f4b5c65b27fd1aa2cd4de7db5963ed2d659f80212330@group.calendar.google.com', label: 'TCR Media', cls: 'tcr' }
 ];
 
 function getTrello() { try { return JSON.parse(localStorage.getItem(TRELLO_KEY))||{}; } catch { return {}; } }
+
 function getGToken() {
   try {
     const d = JSON.parse(localStorage.getItem(GTOKEN_KEY));
@@ -205,6 +217,7 @@ function getGToken() {
     return d.token;
   } catch { return null; }
 }
+
 function saveGToken(token, expiresIn) {
   localStorage.setItem(GTOKEN_KEY, JSON.stringify({ token, expires: Date.now() + (expiresIn*1000) - 60000 }));
 }
@@ -213,15 +226,55 @@ function showConfig() {
   const cfg = getTrello();
   if (cfg.key) document.getElementById('apiKeyInput').value = cfg.key;
   if (cfg.token) document.getElementById('tokenInput').value = cfg.token;
+  if (cfg.key && cfg.token) loadWorkspaces(true);
   updateCalStatus();
   document.getElementById('configOverlay').style.display = 'flex';
 }
 
-function saveTrelloConfig() {
+async function loadWorkspaces(silent) {
   const key = document.getElementById('apiKeyInput').value.trim();
   const token = document.getElementById('tokenInput').value.trim();
-  if (!key||!token) { alert('Enter both API Key and Token.'); return; }
-  localStorage.setItem(TRELLO_KEY, JSON.stringify({key,token}));
+  if (!key || !token) { if (!silent) alert('Enter both API Key and Token first.'); return; }
+
+  try {
+    const r = await fetch(`https://api.trello.com/1/members/me/organizations?key=${key}&token=${token}`);
+    if (!r.ok) throw new Error('Invalid credentials');
+    const orgs = await r.json();
+
+    const cfg = getTrello();
+    const saved = cfg.workspaceIds || [];
+
+    const list = document.getElementById('workspaceList');
+    list.innerHTML = orgs.map(o => `
+      <label class="workspace-option">
+        <input type="checkbox" value="${o.id}" data-name="${esc(o.displayName)}" ${saved.includes(o.id)?'checked':''}>
+        ${esc(o.displayName)}
+        <span style="margin-left:auto;font-family:'DM Mono',monospace;font-size:9px;color:var(--text-dim);">${esc(o.name)}</span>
+      </label>
+    `).join('');
+
+    document.getElementById('workspaceSection').style.display = 'block';
+  } catch(e) {
+    alert('Could not load workspaces: ' + e.message);
+  }
+}
+
+function selectAllWorkspaces() {
+  document.querySelectorAll('#workspaceList input[type=checkbox]').forEach(cb => cb.checked = true);
+}
+
+function saveConfig() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  const token = document.getElementById('tokenInput').value.trim();
+  const checked = [...document.querySelectorAll('#workspaceList input[type=checkbox]:checked')];
+  const workspaceIds = checked.map(cb => cb.value);
+  const workspaceNames = {};
+  checked.forEach(cb => workspaceNames[cb.value] = cb.dataset.name);
+
+  if (!key || !token) { alert('Enter both API Key and Token.'); return; }
+  if (!workspaceIds.length) { alert('Select at least one workspace.'); return; }
+
+  localStorage.setItem(TRELLO_KEY, JSON.stringify({ key, token, workspaceIds, workspaceNames }));
   document.getElementById('configOverlay').style.display = 'none';
   loadTrelloTasks();
 }
@@ -284,7 +337,6 @@ async function loadCalendar() {
 function renderCal(events) {
   const el = document.getElementById('calContent');
   if (!events.length) { el.innerHTML = '<div class="empty">No events today or tomorrow</div>'; return; }
-
   const now = new Date();
   const todayStr = now.toDateString();
   const tomorrowStr = new Date(now.getFullYear(), now.getMonth(), now.getDate()+1).toDateString();
@@ -311,7 +363,6 @@ function renderCal(events) {
 
   const todayEvents = events.filter(e => isDay(e, todayStr));
   const tomorrowEvents = events.filter(e => isDay(e, tomorrowStr));
-
   el.innerHTML = renderDay('TODAY', todayEvents) + renderDay('TOMORROW', tomorrowEvents);
 }
 
@@ -329,46 +380,95 @@ async function loadTrelloTasks() {
     ['fireTasks','weekTasks','doneTasks'].forEach(id => document.getElementById(id).innerHTML='<div class="empty">Connect Trello first</div>');
     return;
   }
+
+  const workspaceIds = cfg.workspaceIds || [];
+  const workspaceNames = cfg.workspaceNames || {};
+
+  if (!workspaceIds.length) {
+    document.getElementById('fireTasks').innerHTML = '<div class="empty">No workspaces selected — open ⚙ to configure</div>';
+    return;
+  }
+
   try {
-    const boards = await trelloGet('/members/me/boards?filter=open');
-    const board = boards.find(b => b.name === BOARD_NAME);
-    if (!board) { document.getElementById('fireTasks').innerHTML=`<div class="error-msg">Board "${BOARD_NAME}" not found</div>`; return; }
-    const [lists, cards] = await Promise.all([
-      trelloGet(`/boards/${board.id}/lists`),
-      trelloGet(`/boards/${board.id}/cards?fields=name,due,dueComplete,idList,shortUrl`)
-    ]);
-    const lm = {};
-    lists.forEach(l => lm[l.id]=l.name);
-    const fire=[], week=[], done=[];
-    cards.forEach(c => {
-      const n = lm[c.idList]||'';
-      if (n.includes('On Fire') && !c.dueComplete) fire.push(c);
-      else if (n.includes('This Week') && !c.dueComplete) week.push(c);
-      else if (n.includes('Done') || c.dueComplete) done.push(c);
+    // Get all open boards across selected workspaces in parallel
+    const boardFetches = workspaceIds.map(wsId =>
+      trelloGet(`/organizations/${wsId}/boards?filter=open&fields=id,name,idOrganization`)
+        .then(boards => boards.map(b => ({ ...b, _wsName: workspaceNames[wsId] || wsId })))
+        .catch(() => [])
+    );
+
+    const boardArrays = await Promise.all(boardFetches);
+    const allBoards = boardArrays.flat();
+
+    if (!allBoards.length) {
+      document.getElementById('fireTasks').innerHTML = '<div class="empty">No open boards found in selected workspaces</div>';
+      return;
+    }
+
+    // Fetch lists + cards from all boards in parallel
+    const boardData = await Promise.all(allBoards.map(async board => {
+      const [lists, cards] = await Promise.all([
+        trelloGet(`/boards/${board.id}/lists?fields=id,name`),
+        trelloGet(`/boards/${board.id}/cards?fields=name,due,dueComplete,idList,shortUrl`)
+      ]);
+      return { board, lists, cards };
+    }));
+
+    const fire = [], week = [], done = [];
+
+    boardData.forEach(({ board, lists, cards }) => {
+      const lm = {};
+      lists.forEach(l => lm[l.id] = l.name);
+
+      cards.forEach(c => {
+        const listName = lm[c.idList] || '';
+        const cardWithMeta = { ...c, _boardName: board.name, _wsName: board._wsName };
+
+        if ((listName.toLowerCase().includes('on fire') || listName.toLowerCase().includes('overdue')) && !c.dueComplete) {
+          fire.push(cardWithMeta);
+        } else if ((listName.toLowerCase().includes('this week') || listName.toLowerCase().includes('in flight')) && !c.dueComplete) {
+          week.push(cardWithMeta);
+        } else if (listName.toLowerCase().includes('done') || c.dueComplete) {
+          // Only show done cards from this week
+          if (c.due) {
+            const dueDate = new Date(c.due);
+            const weekAgo = new Date(Date.now() - 7 * 86400000);
+            if (dueDate > weekAgo) done.push(cardWithMeta);
+          } else {
+            done.push(cardWithMeta);
+          }
+        }
+      });
     });
+
     const byDue = a => a.sort((x,y) => (!x.due&&!y.due)?0:!x.due?1:!y.due?-1:new Date(x.due)-new Date(y.due));
-    renderTasks('fireTasks','fireCount',byDue(fire),'fire');
-    renderTasks('weekTasks','weekCount',byDue(week),'week');
-    renderTasks('doneTasks','doneCount',done,'done');
-    document.getElementById('statusDot').style.background='var(--green)';
-    document.getElementById('lastUpdated').textContent='Updated '+new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+
+    renderTasks('fireTasks', 'fireCount', byDue(fire), 'fire');
+    renderTasks('weekTasks', 'weekCount', byDue(week), 'week');
+    renderTasks('doneTasks', 'doneCount', done, 'done');
+
+    document.getElementById('statusDot').style.background = 'var(--green)';
+    document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+
   } catch(e) {
-    document.getElementById('fireTasks').innerHTML=`<div class="error-msg">Trello error: ${e.message}</div>`;
-    document.getElementById('statusDot').style.background='var(--red)';
+    document.getElementById('fireTasks').innerHTML = `<div class="error-msg">Trello error: ${e.message}</div>`;
+    document.getElementById('statusDot').style.background = 'var(--red)';
   }
 }
 
 function renderTasks(cid, kid, cards, type) {
-  document.getElementById(kid).textContent=`${cards.length} card${cards.length!==1?'s':''}`;
-  if (!cards.length) { document.getElementById(cid).innerHTML='<div class="empty">Nothing here</div>'; return; }
-  document.getElementById(cid).innerHTML=cards.map(c => {
-    const d = type==='done'?doneS(c.due):dueS(c.due);
-    return `<div class="task-card" onclick="window.open('${c.shortUrl}','_blank')"><div class="task-indicator ${type}"></div><div style="flex:1;min-width:0;"><div class="task-name">${esc(c.name)}</div>${c.due?`<div class="task-due ${d.cls}">${d.label}</div>`:''}</div></div>`;
+  document.getElementById(kid).textContent = `${cards.length} card${cards.length!==1?'s':''}`;
+  if (!cards.length) { document.getElementById(cid).innerHTML = '<div class="empty">Nothing here</div>'; return; }
+  document.getElementById(cid).innerHTML = cards.map(c => {
+    const d = type==='done' ? doneS(c.due) : dueS(c.due);
+    const boardLabel = c._boardName ? `<div class="task-board">${esc(c._boardName)}</div>` : '';
+    return `<div class="task-card" onclick="window.open('${c.shortUrl}','_blank')"><div class="task-indicator ${type}"></div><div style="flex:1;min-width:0;"><div class="task-name">${esc(c.name)}</div>${c.due?`<div class="task-due ${d.cls}">${d.label}</div>`:''} ${boardLabel}</div></div>`;
   }).join('');
 }
 
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function ft(dt) { return dt?new Date(dt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true}):''; }
+
 function dueS(due) {
   if (!due) return {label:'',cls:'normal'};
   const d=(new Date(due)-Date.now())/86400000;
@@ -377,6 +477,7 @@ function dueS(due) {
   if (d<2) return {label:'TOMORROW',cls:'soon'};
   return {label:new Date(due).toLocaleDateString('en-US',{month:'short',day:'numeric'}),cls:'normal'};
 }
+
 function doneS(due) {
   if (!due) return {label:'DONE',cls:'complete'};
   return {label:new Date(due).toLocaleDateString('en-US',{month:'short',day:'numeric'}),cls:'complete'};
