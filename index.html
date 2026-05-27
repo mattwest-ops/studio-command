@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -115,7 +116,6 @@ body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif
   <div class="config-box">
     <div class="config-title">// STUDIO COMMAND</div>
     <div class="config-sub">Connect your Trello and Google Calendar. Credentials are stored locally in your browser only.</div>
-
     <div class="field">
       <div class="field-label">Trello API Key</div>
       <input class="field-input" id="apiKeyInput" type="text" placeholder="Your Trello API Key" autocomplete="off">
@@ -125,7 +125,6 @@ body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif
       <input class="field-input" id="tokenInput" type="text" placeholder="Your Trello Token" autocomplete="off">
     </div>
     <button class="connect-btn" onclick="loadWorkspaces()">LOAD WORKSPACES</button>
-
     <div id="workspaceSection" style="display:none; margin-top:20px;">
       <div class="workspace-select">
         <div class="workspace-label">Select Workspaces to Show</div>
@@ -134,7 +133,6 @@ body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif
       <button class="connect-btn" onclick="saveConfig()">SAVE & CONNECT</button>
       <button class="connect-btn secondary" onclick="selectAllWorkspaces()">SELECT ALL</button>
     </div>
-
     <hr class="divider">
     <div class="google-section">
       <div class="google-label">Google Calendar</div>
@@ -235,15 +233,12 @@ async function loadWorkspaces(silent) {
   const key = document.getElementById('apiKeyInput').value.trim();
   const token = document.getElementById('tokenInput').value.trim();
   if (!key || !token) { if (!silent) alert('Enter both API Key and Token first.'); return; }
-
   try {
     const r = await fetch(`https://api.trello.com/1/members/me/organizations?key=${key}&token=${token}`);
     if (!r.ok) throw new Error('Invalid credentials');
     const orgs = await r.json();
-
     const cfg = getTrello();
     const saved = cfg.workspaceIds || [];
-
     const list = document.getElementById('workspaceList');
     list.innerHTML = orgs.map(o => `
       <label class="workspace-option">
@@ -252,7 +247,6 @@ async function loadWorkspaces(silent) {
         <span style="margin-left:auto;font-family:'DM Mono',monospace;font-size:9px;color:var(--text-dim);">${esc(o.name)}</span>
       </label>
     `).join('');
-
     document.getElementById('workspaceSection').style.display = 'block';
   } catch(e) {
     alert('Could not load workspaces: ' + e.message);
@@ -270,10 +264,8 @@ function saveConfig() {
   const workspaceIds = checked.map(cb => cb.value);
   const workspaceNames = {};
   checked.forEach(cb => workspaceNames[cb.value] = cb.dataset.name);
-
   if (!key || !token) { alert('Enter both API Key and Token.'); return; }
   if (!workspaceIds.length) { alert('Select at least one workspace.'); return; }
-
   localStorage.setItem(TRELLO_KEY, JSON.stringify({ key, token, workspaceIds, workspaceNames }));
   document.getElementById('configOverlay').style.display = 'none';
   loadTrelloTasks();
@@ -380,32 +372,24 @@ async function loadTrelloTasks() {
     ['fireTasks','weekTasks','doneTasks'].forEach(id => document.getElementById(id).innerHTML='<div class="empty">Connect Trello first</div>');
     return;
   }
-
   const workspaceIds = cfg.workspaceIds || [];
   const workspaceNames = cfg.workspaceNames || {};
-
   if (!workspaceIds.length) {
     document.getElementById('fireTasks').innerHTML = '<div class="empty">No workspaces selected — open ⚙ to configure</div>';
     return;
   }
-
   try {
-    // Get all open boards across selected workspaces in parallel
     const boardFetches = workspaceIds.map(wsId =>
       trelloGet(`/organizations/${wsId}/boards?filter=open&fields=id,name,idOrganization`)
         .then(boards => boards.map(b => ({ ...b, _wsName: workspaceNames[wsId] || wsId })))
         .catch(() => [])
     );
-
     const boardArrays = await Promise.all(boardFetches);
     const allBoards = boardArrays.flat();
-
     if (!allBoards.length) {
       document.getElementById('fireTasks').innerHTML = '<div class="empty">No open boards found in selected workspaces</div>';
       return;
     }
-
-    // Fetch lists + cards from all boards in parallel
     const boardData = await Promise.all(allBoards.map(async board => {
       const [lists, cards] = await Promise.all([
         trelloGet(`/boards/${board.id}/lists?fields=id,name`),
@@ -415,22 +399,19 @@ async function loadTrelloTasks() {
     }));
 
     const fire = [], week = [], done = [];
+    const weekAgo = new Date(Date.now() - 7 * 86400000);
 
     boardData.forEach(({ board, lists, cards }) => {
       const lm = {};
       lists.forEach(l => lm[l.id] = l.name);
-
       cards.forEach(c => {
         const listName = lm[c.idList] || '';
         const cardWithMeta = { ...c, _boardName: board.name, _wsName: board._wsName };
-
         if ((listName.toLowerCase().includes('on fire') || listName.toLowerCase().includes('overdue')) && !c.dueComplete) {
           fire.push(cardWithMeta);
         } else if ((listName.toLowerCase().includes('this week') || listName.toLowerCase().includes('in flight')) && !c.dueComplete) {
           week.push(cardWithMeta);
         } else if (listName.toLowerCase().includes('done') || c.dueComplete) {
-          // Only show done cards active in the last 7 days
-          const weekAgo = new Date(Date.now() - 7 * 86400000);
           const lastActive = c.dateLastActivity ? new Date(c.dateLastActivity) : null;
           if (lastActive && lastActive > weekAgo) {
             done.push(cardWithMeta);
@@ -440,14 +421,11 @@ async function loadTrelloTasks() {
     });
 
     const byDue = a => a.sort((x,y) => (!x.due&&!y.due)?0:!x.due?1:!y.due?-1:new Date(x.due)-new Date(y.due));
-
     renderTasks('fireTasks', 'fireCount', byDue(fire), 'fire');
     renderTasks('weekTasks', 'weekCount', byDue(week), 'week');
     renderTasks('doneTasks', 'doneCount', done, 'done');
-
     document.getElementById('statusDot').style.background = 'var(--green)';
     document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-
   } catch(e) {
     document.getElementById('fireTasks').innerHTML = `<div class="error-msg">Trello error: ${e.message}</div>`;
     document.getElementById('statusDot').style.background = 'var(--red)';
@@ -494,3 +472,6 @@ window.addEventListener('load', () => { initGoogleAuth(); loadAll(); });
 </script>
 </body>
 </html>
+```
+
+Select all of that, copy, paste into GitHub. Done.
