@@ -409,7 +409,7 @@ async function loadTrelloTasks() {
     const boardData = await Promise.all(allBoards.map(async board => {
       const [lists, cards] = await Promise.all([
         trelloGet(`/boards/${board.id}/lists?fields=id,name`),
-        trelloGet(`/boards/${board.id}/cards?fields=name,due,dueComplete,idList,shortUrl`)
+        trelloGet(`/boards/${board.id}/cards?fields=name,due,dueComplete,idList,shortUrl,dateLastActivity`)
       ]);
       return { board, lists, cards };
     }));
@@ -429,12 +429,10 @@ async function loadTrelloTasks() {
         } else if ((listName.toLowerCase().includes('this week') || listName.toLowerCase().includes('in flight')) && !c.dueComplete) {
           week.push(cardWithMeta);
         } else if (listName.toLowerCase().includes('done') || c.dueComplete) {
-          // Only show done cards from this week
-          if (c.due) {
-            const dueDate = new Date(c.due);
-            const weekAgo = new Date(Date.now() - 7 * 86400000);
-            if (dueDate > weekAgo) done.push(cardWithMeta);
-          } else {
+          // Only show done cards active in the last 7 days
+          const weekAgo = new Date(Date.now() - 7 * 86400000);
+          const lastActive = c.dateLastActivity ? new Date(c.dateLastActivity) : null;
+          if (lastActive && lastActive > weekAgo) {
             done.push(cardWithMeta);
           }
         }
