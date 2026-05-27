@@ -399,22 +399,24 @@ async function loadTrelloTasks() {
         // Skip backlog
         if (/backlog/i.test(listName)) return;
 
-        // Completed cards — show if completed this week
+        // Completed cards — only show if last active since this Monday
         if (c.dueComplete) {
-          if (lastActive && lastActive >= weekAgo) done.push(card);
-          return;
+          if (lastActive && lastActive >= monday && lastActive.getFullYear() === now.getFullYear()) {
+            done.push(card);
+          }
+          return; // Always return — never let completed cards hit fire/week
         }
 
         // No due date — skip (can't categorize without one)
         if (!dueDate) return;
 
-        // Overdue — due date is before today
+        // Overdue — due date is before today, not complete
         if (dueDate < now) {
           fire.push(card);
           return;
         }
 
-        // Due this week (today through Sunday)
+        // Due this week (today through Sunday), not complete
         if (dueDate >= now && dueDate <= sunday) {
           week.push(card);
           return;
